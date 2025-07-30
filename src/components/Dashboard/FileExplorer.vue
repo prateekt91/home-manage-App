@@ -1,6 +1,6 @@
 <script setup>
 import {ref, computed, onMounted, onBeforeUnmount} from 'vue'
-import './Dashboard.css'
+import './FileExplorer.css'
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
@@ -57,6 +57,14 @@ const isTextFile = (type) => {
       type === 'application/xml'
 }
 
+const isMediaFile = (type) => {
+  return type.startsWith('video/') || type.startsWith('audio/')
+}
+
+const isPDF = (type) => {
+  return type.startsWith('application/pdf')
+}
+
 // API Service functions
 const apiService = {
   async fetchFiles() {
@@ -102,6 +110,21 @@ const apiService = {
         return {
           type: 'text',
           content: text
+        }
+      } else if (isMediaFile(fileType)) {
+        // Fix: Create blob URL for media files
+        const blob = await response.blob()
+        return {
+          type: 'media',
+          content: URL.createObjectURL(blob),
+          blob: blob
+        }
+      } else if (isPDF(fileType)) {
+        const pdf = await response.blob()
+        return {
+          type: 'pdf',
+          content: URL.createObjectURL(pdf),
+          blob: pdf
         }
       } else {
         // For other files, try JSON first, then fallback to text
@@ -220,6 +243,16 @@ const clearSelection = () => {
   }
   selectedFile.value = null
 }
+
+const getVideoPoster = (file) => {
+  // You can implement logic to generate or fetch a poster/thumbnail
+  // For now, return null or a default poster image
+  return null
+
+  // Or if you have a thumbnail generation endpoint:
+  // return `${API_BASE_URL}/files/thumbnail?fileName=${encodeURIComponent(file.name)}`
+}
+
 
 // Initialize component
 onMounted(async () => {
@@ -345,6 +378,29 @@ onBeforeUnmount(() => {
                 @error="handleImageError"
             />
           </div>
+
+          <div v-else-if="selectedFile.contentType === 'media'" class="media-content">
+            <video
+                controls
+                preload="metadata"
+                controlslist="nodownload"
+                class="video-player"
+                :poster="getVideoPoster(selectedFile)"
+            >
+              <source :src="selectedFile.content" :type="selectedFile.type">
+              <p>Your browser doesn't support HTML5 video. Here is a <a :href="selectedFile.content">link to the video</a> instead.</p>
+            </video>
+            <div class="video-info">
+              <span class="video-name">{{ selectedFile.name }}</span>
+              <span class="video-type">{{ selectedFile.type }}</span>
+            </div>
+          </div>
+
+          <div v-else-if="selectedFile.contentType === 'pdf'" class="pdf-content">
+
+            <iframe :src="selectedFile.content" class="pdf-viewer"></iframe>
+          </div>
+
 
           <!-- Text/JSON display -->
           <div v-else-if="selectedFile.contentType === 'text' || selectedFile.contentType === 'json'" class="text-content">

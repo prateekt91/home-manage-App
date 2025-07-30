@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import './Dashboard.css'
+import './FileExplorer.css'
 
 // Mock file system data
 const files = ref([

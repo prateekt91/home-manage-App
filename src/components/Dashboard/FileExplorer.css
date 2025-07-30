@@ -1,5 +1,5 @@
 
-/* Dashboard Layout */
+/* FileExplorer Layout */
 .dashboard {
     display: grid;
     grid-template-columns: 1fr 2fr;
@@ -386,7 +386,7 @@
 .content-display {
     flex: 1;
     overflow: auto;
-    background: #000000;
+    background: #f8f9fa;
     border: 1px solid #e9ecef;
     border-radius: 8px;
     padding: 1.5rem;
@@ -484,4 +484,96 @@
 .search-input:focus {
     outline: 2px solid rgba(255, 255, 255, 0.5);
     outline-offset: 2px;
+}
+
+/* Media Content Styles */
+.media-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.video-player {
+    width: 100%;
+    max-width: 800px;
+    height: auto;
+    max-height: 60vh;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background: #000;
+}
+
+.video-player:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+.video-info {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.video-name {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.video-type {
+    font-size: 0.9rem;
+    color: #6c757d;
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+/* Hide default controls and create custom ones */
+.video-player {
+    position: relative;
+}
+
+.video-player video {
+    width: 100%;
+    height: auto;
+}
+
+/* Create custom control overlay */
+.custom-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.custom-play-button {
+    background: #667eea;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    color: white;
+    cursor: pointer;
+}
+
+/* Responsive video */
+@media (max-width: 768px) {
+    .video-player {
+        max-height: 40vh;
+    }
+
+    .media-content {
+        padding: 0.5rem;
+    }
 }

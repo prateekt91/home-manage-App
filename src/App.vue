@@ -1,13 +1,12 @@
 <script setup>
-import Dashboard from './components/Dashboard/Dashboard.vue'
+import FileExplorer from './components/Dashboard/FileExplorer.vue'
 // Your app logic here
 </script>
 
 <template>
   <div id="app">
     <h1>Home Management</h1>
-    <p>Welcome to your clean Vue app!</p>
-    <Dashboard />
+    <FileExplorer />
   </div>
 </template>
 
