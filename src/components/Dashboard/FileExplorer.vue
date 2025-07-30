@@ -1,11 +1,18 @@
 <script setup>
-import {ref, computed, onMounted, onBeforeUnmount} from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import './FileExplorer.css'
 
-// API Configuration
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
-// Reactive state
+// ============================================================================
+// REACTIVE STATE
+// ============================================================================
+
+// Core state
 const files = ref([])
 const selectedFile = ref(null)
 const searchQuery = ref('')
@@ -17,11 +24,19 @@ const isLoadingFileContent = ref(false)
 const filesError = ref(null)
 const fileContentError = ref(null)
 
-// Computed properties
+// Media-specific state
+const videoDimensions = ref({ width: 0, height: 0 })
+const pdfDimensions = ref({ width: 0, height: 0 })
+const isFullscreenPdf = ref(false)
+
+// ============================================================================
+// COMPUTED PROPERTIES
+// ============================================================================
+
 const filteredFiles = computed(() => {
   if (!searchQuery.value) return files.value
   return files.value.filter(file =>
-      file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
 })
 
@@ -44,112 +59,77 @@ const fileIcon = computed(() => (type) => {
   return icons[type] || '📄'
 })
 
-// Helper function to determine if file type is an image
-const isImageFile = (type) => {
-  return type.startsWith('image/')
-}
+const videoPlayerStyle = computed(() => {
+  if (!videoDimensions.value.width || !videoDimensions.value.height) {
+    return { maxWidth: '480px', height: '360px' }
+  }
 
-// Helper function to determine if file type is text-based
-const isTextFile = (type) => {
-  return type.startsWith('text/') ||
-      type === 'application/json' ||
-      type === 'application/javascript' ||
-      type === 'application/xml'
-}
+  const containerWidth = 480
+  const containerHeight = 360
+  const videoAspectRatio = videoDimensions.value.width / videoDimensions.value.height
+  const containerAspectRatio = containerWidth / containerHeight
 
-const isMediaFile = (type) => {
-  return type.startsWith('video/') || type.startsWith('audio/')
-}
+  let width, height
 
-const isPDF = (type) => {
-  return type.startsWith('application/pdf')
-}
+  if (videoAspectRatio > containerAspectRatio) {
+    width = Math.min(videoDimensions.value.width, containerWidth)
+    height = width / videoAspectRatio
+  } else {
+    height = Math.min(videoDimensions.value.height, containerHeight)
+    width = height * videoAspectRatio
+  }
 
-// API Service functions
-const apiService = {
-  async fetchFiles() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/files/list`)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data = await response.json()
-      return data
-    } catch (error) {
-      console.error('Error fetching files:', error)
-      throw error
-    }
-  },
+  return {
+    width: `${width}px`,
+    height: `${height}px`,
+    maxWidth: '100%',
+    maxHeight: '100vh'
+  }
+})
 
-  async fetchFileContent(fileName, fileType) {
-    try {
-
-      let url;
-      if (isImageFile(fileType)) {
-        url = `${import.meta.env.VITE_API_URL}/files/download/resize?fileName=${encodeURIComponent(fileName)}&width=800&height=600&quality=ULTRA_QUALITY`;
-      } else {
-        url = `${import.meta.env.VITE_API_URL}/files/download?fileName=${encodeURIComponent(fileName)}`;
-      }
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      // Handle different file types
-      if (isImageFile(fileType)) {
-        // For images, we need the blob URL
-        const blob = await response.blob()
-        return {
-          type: 'image',
-          content: URL.createObjectURL(blob),
-          blob: blob
-        }
-      } else if (isTextFile(fileType)) {
-        // For text files, get as text
-        const text = await response.text()
-        return {
-          type: 'text',
-          content: text
-        }
-      } else if (isMediaFile(fileType)) {
-        // Fix: Create blob URL for media files
-        const blob = await response.blob()
-        return {
-          type: 'media',
-          content: URL.createObjectURL(blob),
-          blob: blob
-        }
-      } else if (isPDF(fileType)) {
-        const pdf = await response.blob()
-        return {
-          type: 'pdf',
-          content: URL.createObjectURL(pdf),
-          blob: pdf
-        }
-      } else {
-        // For other files, try JSON first, then fallback to text
-        try {
-          const data = await response.json()
-          return {
-            type: 'json',
-            content: JSON.stringify(data, null, 2)
-          }
-        } catch {
-          const text = await response.text()
-          return {
-            type: 'text',
-            content: text
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching file content:', error)
-      throw error
+const pdfViewerStyle = computed(() => {
+  if (isFullscreenPdf.value) {
+    return {
+      width: '95vw',
+      height: '95vh'
     }
   }
+
+  const containerWidth = 1200
+  const containerHeight = window.innerHeight * 0.8
+
+  return {
+    width: '100%',
+    height: `${Math.min(containerHeight, 800)}px`,
+    maxWidth: `${containerWidth}px`
+  }
+})
+
+// ============================================================================
+// FILE TYPE UTILITIES
+// ============================================================================
+
+const isImageFile = (type) => type.startsWith('image/')
+
+const isTextFile = (type) => {
+  return type.startsWith('text/') ||
+    type === 'application/json' ||
+    type === 'application/javascript' ||
+    type === 'application/xml'
 }
 
-// Utility functions
+const isMediaFile = (type) => type.startsWith('video/') || type.startsWith('audio/')
+
+const isPDF = (type) => type.startsWith('application/pdf')
+
+const isLargeVideoFile = (file) => {
+  return isMediaFile(file.type) && file.size > 100 * 1024 * 1024 // 100MB threshold
+}
+
+// ============================================================================
+// FORMATTING UTILITIES
+// ============================================================================
+
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
@@ -160,21 +140,138 @@ const formatFileSize = (bytes) => {
 
 const formatDate = (dateString) => {
   const date = new Date(dateString)
-  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
 }
 
-const getFileTypeClass = (type) => {
-  return `file-type-${type.replace('/', '-')}`
+const getFileTypeClass = (type) => `file-type-${type.replace('/', '-')}`
+
+// ============================================================================
+// API SERVICE
+// ============================================================================
+
+const apiService = {
+  async fetchFiles() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/files/list`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (error) {
+      console.error('Error fetching files:', error)
+      throw error
+    }
+  },
+
+  async fetchFileContent(fileName, fileType, fileSize) {
+    try {
+      let url
+      if (isImageFile(fileType)) {
+        url = `${import.meta.env.VITE_API_URL}/files/download/resize?fileName=${encodeURIComponent(fileName)}&width=800&height=600&quality=ULTRA_QUALITY`
+      } else {
+        url = `${import.meta.env.VITE_API_URL}/files/download?fileName=${encodeURIComponent(fileName)}`
+      }
+
+      // For large video files, return streaming URL instead of blob
+      if (isMediaFile(fileType) && fileSize > 100 * 1024 * 1024) {
+        return {
+          type: 'media',
+          content: url,
+          isStreaming: true
+        }
+      }
+
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      return await this.processFileResponse(response, fileType)
+    } catch (error) {
+      console.error('Error fetching file content:', error)
+      throw error
+    }
+  },
+
+  async processFileResponse(response, fileType) {
+    if (isImageFile(fileType)) {
+      const blob = await response.blob()
+      return {
+        type: 'image',
+        content: URL.createObjectURL(blob),
+        blob: blob
+      }
+    } else if (isTextFile(fileType)) {
+      const text = await response.text()
+      return {
+        type: 'text',
+        content: text
+      }
+    } else if (isMediaFile(fileType)) {
+      const blob = await response.blob()
+      return {
+        type: 'media',
+        content: URL.createObjectURL(blob),
+        blob: blob
+      }
+    } else if (isPDF(fileType)) {
+      const pdf = await response.blob()
+      return {
+        type: 'pdf',
+        content: URL.createObjectURL(pdf),
+        blob: pdf
+      }
+    } else {
+      try {
+        const data = await response.json()
+        return {
+          type: 'json',
+          content: JSON.stringify(data, null, 2)
+        }
+      } catch {
+        const text = await response.text()
+        return {
+          type: 'text',
+          content: text
+        }
+      }
+    }
+  }
 }
 
-// Methods
+// ============================================================================
+// EVENT HANDLERS
+// ============================================================================
+
+const handleVideoLoadedMetadata = (event) => {
+  const video = event.target
+  videoDimensions.value = {
+    width: video.videoWidth,
+    height: video.videoHeight
+  }
+}
+
+const handlePdfLoad = (event) => {
+  console.log('PDF loaded')
+}
+
+const handleImageError = (event) => {
+  console.error('Image failed to load:', event)
+}
+
+// ============================================================================
+// CORE METHODS
+// ============================================================================
+
 const loadFiles = async () => {
   isLoadingFiles.value = true
   filesError.value = null
 
   try {
     const response = await apiService.fetchFiles()
-    // The response is directly an array of files
     files.value = response
   } catch (error) {
     filesError.value = error.message || 'Failed to load files'
@@ -191,13 +288,13 @@ const loadFileContent = async (file) => {
   fileContentError.value = null
 
   try {
-    const response = await apiService.fetchFileContent(file.name, file.type)
-    // Update the file object with content and content type
+    const response = await apiService.fetchFileContent(file.name, file.type, file.size)
     const updatedFile = {
       ...file,
       content: response.content,
       contentType: response.type,
-      blob: response.blob // For images
+      blob: response.blob,
+      isStreaming: response.isStreaming
     }
     selectedFile.value = updatedFile
   } catch (error) {
@@ -214,30 +311,33 @@ const loadFileContent = async (file) => {
 }
 
 const selectFile = async (file) => {
-  // If file already has content, use it directly
   if (file.content) {
     selectedFile.value = file
     return
   }
-
-  // Otherwise, fetch content from API
   await loadFileContent(file)
 }
 
 const refreshFiles = async () => {
   await loadFiles()
-  // Clear selected file if it was deleted
   if (selectedFile.value && !files.value.find(f => f._id === selectedFile.value._id)) {
     selectedFile.value = null
   }
 }
 
+// ============================================================================
+// UI INTERACTION METHODS
+// ============================================================================
+
 const toggleViewMode = () => {
   viewMode.value = viewMode.value === 'list' ? 'grid' : 'list'
 }
 
+const togglePdfFullscreen = () => {
+  isFullscreenPdf.value = !isFullscreenPdf.value
+}
+
 const clearSelection = () => {
-  // Clean up blob URLs to prevent memory leaks
   if (selectedFile.value?.blob) {
     URL.revokeObjectURL(selectedFile.value.content)
   }
@@ -245,21 +345,19 @@ const clearSelection = () => {
 }
 
 const getVideoPoster = (file) => {
-  // You can implement logic to generate or fetch a poster/thumbnail
-  // For now, return null or a default poster image
   return null
-
   // Or if you have a thumbnail generation endpoint:
   // return `${API_BASE_URL}/files/thumbnail?fileName=${encodeURIComponent(file.name)}`
 }
 
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
 
-// Initialize component
 onMounted(async () => {
   await loadFiles()
 })
 
-// Cleanup on unmount
 onBeforeUnmount(() => {
   if (selectedFile.value?.blob) {
     URL.revokeObjectURL(selectedFile.value.content)
@@ -273,26 +371,27 @@ onBeforeUnmount(() => {
     <div class="file-viewer-pane">
       <div class="file-viewer-header">
         <h2>📁 File Explorer</h2>
-        <div class="viewer-controls">
-          <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search files..."
-              class="search-input"
-          >
-          <button @click="toggleViewMode" class="view-toggle">
-            {{ viewMode === 'list' ? '⊞' : '☰' }}
-          </button>
-        </div>
+      </div>
+      
+      <div class="viewer-controls">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search files..."
+          class="search-input"
+        >
+        <button @click="toggleViewMode" class="view-toggle">
+          {{ viewMode === 'list' ? '⊞' : '☰' }}
+        </button>
       </div>
 
       <div class="file-list" :class="{ 'grid-view': viewMode === 'grid' }">
         <div
-            v-for="file in filteredFiles"
-            :key="file.id"
-            @click="selectFile(file)"
-            class="file-item"
-            :class="{
+          v-for="file in filteredFiles"
+          :key="file.id"
+          @click="selectFile(file)"
+          class="file-item"
+          :class="{
             'selected': selectedFile?.id === file.id,
             [getFileTypeClass(file.type)]: true
           }"
@@ -327,6 +426,7 @@ onBeforeUnmount(() => {
         <button v-if="selectedFile" @click="clearSelection" class="close-preview">✕</button>
       </div>
 
+      <!-- File Details -->
       <div v-if="selectedFile" class="file-details">
         <div class="file-details-grid">
           <div class="detail-item">
@@ -344,48 +444,53 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
+      <!-- Preview Content -->
       <div class="preview-content">
+        <!-- No Selection State -->
         <div v-if="!selectedFile" class="no-selection">
           <div class="no-selection-icon">📂</div>
           <p>Choose a file from the left panel to view its contents</p>
         </div>
 
-        <!-- Loading indicator for file content -->
+        <!-- Loading State -->
         <div v-else-if="isLoadingFileContent" class="loading">
           <div class="loading-spinner">⏳</div>
           <p>Loading file content...</p>
         </div>
 
-        <!-- Error state for file content -->
+        <!-- Error State -->
         <div v-else-if="fileContentError" class="error">
           <div class="error-icon">❌</div>
           <p>{{ fileContentError }}</p>
           <button @click="loadFileContent(selectedFile)" class="retry-btn">Retry</button>
         </div>
 
-        <!-- File content display -->
+        <!-- File Content Display -->
         <div v-else class="file-content">
           <div class="content-header">
             <span class="content-type">{{ selectedFile.type.toUpperCase() }}</span>
           </div>
 
-          <!-- Image display -->
+          <!-- Image Content -->
           <div v-if="selectedFile.contentType === 'image'" class="image-content">
             <img
-                :src="selectedFile.content"
-                :alt="selectedFile.name"
-                class="preview-image"
-                @error="handleImageError"
+              :src="selectedFile.content"
+              :alt="selectedFile.name"
+              class="preview-image"
+              @error="handleImageError"
             />
           </div>
 
+          <!-- Media Content -->
           <div v-else-if="selectedFile.contentType === 'media'" class="media-content">
             <video
-                controls
-                preload="metadata"
-                controlslist="nodownload"
-                class="video-player"
-                :poster="getVideoPoster(selectedFile)"
+              controls
+              preload="metadata"
+              controlslist="nodownload"
+              class="video-player"
+              :style="videoPlayerStyle"
+              :poster="getVideoPoster(selectedFile)"
+              @loadedmetadata="handleVideoLoadedMetadata"
             >
               <source :src="selectedFile.content" :type="selectedFile.type">
               <p>Your browser doesn't support HTML5 video. Here is a <a :href="selectedFile.content">link to the video</a> instead.</p>
@@ -393,21 +498,40 @@ onBeforeUnmount(() => {
             <div class="video-info">
               <span class="video-name">{{ selectedFile.name }}</span>
               <span class="video-type">{{ selectedFile.type }}</span>
+              <span v-if="videoDimensions.width && videoDimensions.height" class="video-dimensions">
+                {{ videoDimensions.width }}×{{ videoDimensions.height }}
+              </span>
             </div>
           </div>
 
+          <!-- PDF Content -->
           <div v-else-if="selectedFile.contentType === 'pdf'" class="pdf-content">
-
-            <iframe :src="selectedFile.content" class="pdf-viewer"></iframe>
+            <div class="pdf-controls">
+              <button @click="togglePdfFullscreen" class="pdf-fullscreen-btn">
+                {{ isFullscreenPdf ? '↙️' : '⤢' }} {{ isFullscreenPdf ? 'Exit Fullscreen' : 'Fullscreen' }}
+              </button>
+            </div>
+            
+            <iframe 
+              :src="selectedFile.content" 
+              class="pdf-viewer"
+              :style="pdfViewerStyle"
+              @load="handlePdfLoad"
+              title="PDF Viewer"
+            ></iframe>
+            
+            <div class="pdf-info">
+              <span class="pdf-name">{{ selectedFile.name }}</span>
+              <span class="pdf-type">{{ selectedFile.type }}</span>
+            </div>
           </div>
 
-
-          <!-- Text/JSON display -->
+          <!-- Text/JSON Content -->
           <div v-else-if="selectedFile.contentType === 'text' || selectedFile.contentType === 'json'" class="text-content">
             <pre class="content-display"><code>{{ selectedFile.content }}</code></pre>
           </div>
 
-          <!-- Fallback for unknown content types -->
+          <!-- Unknown Content Type -->
           <div v-else class="unknown-content">
             <div class="unknown-icon">❓</div>
             <p>Cannot preview this file type</p>
@@ -415,6 +539,17 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- PDF Fullscreen Modal -->
+    <div v-if="isFullscreenPdf" class="pdf-fullscreen" @click.self="togglePdfFullscreen">
+      <button @click="togglePdfFullscreen" class="pdf-fullscreen-close">✕</button>
+      <iframe 
+        :src="selectedFile.content" 
+        class="pdf-viewer"
+        :style="pdfViewerStyle"
+        title="PDF Viewer Fullscreen"
+      ></iframe>
     </div>
   </div>
 </template>
