@@ -15,12 +15,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 // Core state
 const files = ref([])
 const selectedFile = ref(null)
+const selectedFiles = ref(new Set()) // For multi-select
+const isMultiSelectMode = ref(false)
 const searchQuery = ref('')
 const viewMode = ref('list') // 'list' or 'grid'
 
 // Loading and error states
 const isLoadingFiles = ref(false)
 const isLoadingFileContent = ref(false)
+const loadingFileId = ref(null)
 const filesError = ref(null)
 const fileContentError = ref(null)
 
@@ -38,6 +41,21 @@ const filteredFiles = computed(() => {
   return files.value.filter(file =>
     file.name.toLowerCase().includes(searchQuery.value.toLowerCase())
   )
+})
+
+const selectedFileCount = computed(() => selectedFiles.value.size)
+
+const allFilesSelected = computed(() => {
+  return filteredFiles.value.length > 0 && 
+         filteredFiles.value.every(file => selectedFiles.value.has(file.id || file._id))
+})
+
+const someFilesSelected = computed(() => {
+  return selectedFiles.value.size > 0 && !allFilesSelected.value
+})
+
+const selectedFilesArray = computed(() => {
+  return filteredFiles.value.filter(file => selectedFiles.value.has(file.id || file._id))
 })
 
 const fileIcon = computed(() => (type) => {
@@ -123,7 +141,7 @@ const isMediaFile = (type) => type.startsWith('video/') || type.startsWith('audi
 const isPDF = (type) => type.startsWith('application/pdf')
 
 const isLargeVideoFile = (file) => {
-  return isMediaFile(file.type) && file.size > 100 * 1024 * 1024 // 100MB threshold
+  return isMediaFile(file.type) && file.size > 100 * 1024 * 1024
 }
 
 // ============================================================================
@@ -147,6 +165,69 @@ const formatDate = (dateString) => {
 }
 
 const getFileTypeClass = (type) => `file-type-${type.replace('/', '-')}`
+
+// ============================================================================
+// MULTI-SELECT METHODS
+// ============================================================================
+
+const toggleMultiSelectMode = () => {
+  isMultiSelectMode.value = !isMultiSelectMode.value
+  if (!isMultiSelectMode.value) {
+    selectedFiles.value.clear()
+  }
+}
+
+const toggleFileSelection = (file, event) => {
+  event.stopPropagation()
+  const fileId = file.id || file._id
+  
+  if (selectedFiles.value.has(fileId)) {
+    selectedFiles.value.delete(fileId)
+  } else {
+    selectedFiles.value.add(fileId)
+  }
+}
+
+const toggleSelectAll = () => {
+  if (allFilesSelected.value) {
+    selectedFiles.value.clear()
+  } else {
+    filteredFiles.value.forEach(file => {
+      selectedFiles.value.add(file.id || file._id)
+    })
+  }
+}
+
+const clearAllSelections = () => {
+  selectedFiles.value.clear()
+}
+
+const downloadSelectedFiles = async () => {
+  if (selectedFiles.value.size === 0) return
+  
+  // Here you would implement bulk download logic
+  console.log('Downloading selected files:', selectedFilesArray.value.map(f => f.name))
+  alert(`Would download ${selectedFiles.value.size} files`)
+}
+
+const deleteSelectedFiles = async () => {
+  if (selectedFiles.value.size === 0) return
+  
+  const confirmed = confirm(`Are you sure you want to delete ${selectedFiles.value.size} selected files?`)
+  if (!confirmed) return
+  
+  // Here you would implement bulk delete logic
+  console.log('Deleting selected files:', selectedFilesArray.value.map(f => f.name))
+  alert(`Would delete ${selectedFiles.value.size} files`)
+}
+
+const getSelectedFilesInfo = () => {
+  const totalSize = selectedFilesArray.value.reduce((sum, file) => sum + file.size, 0)
+  return {
+    count: selectedFiles.value.size,
+    totalSize: formatFileSize(totalSize)
+  }
+}
 
 // ============================================================================
 // API SERVICE
@@ -175,7 +256,6 @@ const apiService = {
         url = `${import.meta.env.VITE_API_URL}/files/download?fileName=${encodeURIComponent(fileName)}`
       }
 
-      // For large video files, return streaming URL instead of blob
       if (isMediaFile(fileType) && fileSize > 100 * 1024 * 1024) {
         return {
           type: 'media',
@@ -285,6 +365,7 @@ const loadFileContent = async (file) => {
   if (!file._id) return
 
   isLoadingFileContent.value = true
+  loadingFileId.value = file.id || file._id
   fileContentError.value = null
 
   try {
@@ -307,10 +388,13 @@ const loadFileContent = async (file) => {
     console.error('Error loading file content:', error)
   } finally {
     isLoadingFileContent.value = false
+    loadingFileId.value = null // Clear the loading file tracker
   }
 }
 
 const selectFile = async (file) => {
+  if (isMultiSelectMode.value) return // Don't load content in multi-select mode
+  
   if (file.content) {
     selectedFile.value = file
     return
@@ -346,8 +430,6 @@ const clearSelection = () => {
 
 const getVideoPoster = (file) => {
   return null
-  // Or if you have a thumbnail generation endpoint:
-  // return `${API_BASE_URL}/files/thumbnail?fileName=${encodeURIComponent(file.name)}`
 }
 
 // ============================================================================
@@ -379,24 +461,84 @@ onBeforeUnmount(() => {
           type="text"
           placeholder="Search files..."
           class="search-input"
+          :disabled="isLoadingFiles"
         >
-        <button @click="toggleViewMode" class="view-toggle">
+        <button @click="toggleViewMode" class="view-toggle" :disabled="isLoadingFiles">
           {{ viewMode === 'list' ? '⊞' : '☰' }}
+        </button>
+        <button 
+          @click="toggleMultiSelectMode" 
+          class="multi-select-toggle"
+          :class="{ active: isMultiSelectMode }"
+          :disabled="isLoadingFiles"
+        >
+          {{ isMultiSelectMode ? '✓' : '☐' }}
         </button>
       </div>
 
-      <div class="file-list" :class="{ 'grid-view': viewMode === 'grid' }">
+      <!-- Multi-select controls -->
+      <div v-if="isMultiSelectMode" class="multi-select-controls">
+        <div class="select-all-container">
+          <input
+            type="checkbox"
+            id="select-all"
+            :checked="allFilesSelected"
+            :indeterminate="someFilesSelected"
+            @change="toggleSelectAll"
+            class="select-all-checkbox"
+          >
+          <label for="select-all" class="select-all-label">
+            {{ allFilesSelected ? 'Deselect All' : 'Select All' }}
+          </label>
+        </div>
+        
+        <div v-if="selectedFileCount > 0" class="selection-info">
+          <span class="selected-count">{{ selectedFileCount }} selected</span>
+          <span class="selected-size">({{ getSelectedFilesInfo().totalSize }})</span>
+        </div>
+      </div>
+
+      <!-- Bulk actions -->
+      <div v-if="isMultiSelectMode && selectedFileCount > 0" class="bulk-actions">
+        <button @click="downloadSelectedFiles" class="bulk-action-btn download-btn">
+          📥 Download ({{ selectedFileCount }})
+        </button>
+        <button @click="deleteSelectedFiles" class="bulk-action-btn delete-btn">
+          🗑️ Delete ({{ selectedFileCount }})
+        </button>
+        <button @click="clearAllSelections" class="bulk-action-btn clear-btn">
+          ✕ Clear Selection
+        </button>
+      </div>
+
+      <div class="file-list" :class="{ 'grid-view': viewMode === 'grid', 'multi-select-mode': isMultiSelectMode }">
         <div
           v-for="file in filteredFiles"
           :key="file.id"
           @click="selectFile(file)"
           class="file-item"
           :class="{
-            'selected': selectedFile?.id === file.id,
+            'selected': selectedFile?.id === file.id && !isMultiSelectMode,
+            'multi-selected': selectedFiles.has(file.id || file._id),
+            'loading': loadingFileId === (file.id || file._id),
             [getFileTypeClass(file.type)]: true
           }"
         >
-          <div class="file-icon">{{ fileIcon(file.type) }}</div>
+          <!-- Multi-select checkbox -->
+          <div v-if="isMultiSelectMode" class="file-checkbox-container">
+            <input
+              type="checkbox"
+              :checked="selectedFiles.has(file.id || file._id)"
+              @change="toggleFileSelection(file, $event)"
+              class="file-checkbox"
+              :id="`file-${file.id || file._id}`"
+            >
+          </div>
+
+          <div class="file-icon">
+            <div v-if="loadingFileId === (file.id || file._id)" class="loading-spinner"></div>
+            <span v-else>{{ fileIcon(file.type) }}</span>
+          </div>
           <div class="file-info">
             <div class="file-name">{{ file.name }}</div>
             <div class="file-meta">
@@ -408,134 +550,183 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Loading indicator for files -->
-      <div v-if="isLoadingFiles" class="loading">
-        Loading files...
+      <div v-if="isLoadingFiles" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Loading files...</p>
       </div>
 
       <!-- Error message for files -->
       <div v-if="filesError" class="error">
         {{ filesError }}
-        <button @click="refreshFiles" class="retry-btn">Retry</button>
+        <button @click="refreshFiles" class="retry-btn" :disabled="isLoadingFiles">
+          {{ isLoadingFiles ? 'Loading...' : 'Retry' }}
+        </button>
       </div>
     </div>
 
     <!-- Preview Pane -->
     <div class="preview-pane">
       <div class="preview-header">
-        <h3>{{ selectedFile ? '👁️ File Preview' : '📋 Select a file to preview' }}</h3>
-        <button v-if="selectedFile" @click="clearSelection" class="close-preview">✕</button>
+        <h3>
+          {{ isMultiSelectMode && selectedFileCount > 0 
+              ? `📋 ${selectedFileCount} files selected` 
+              : selectedFile 
+                ? '👁️ File Preview' 
+                : '📋 Select a file to preview' 
+          }}
+        </h3>
+        <button v-if="selectedFile && !isMultiSelectMode" @click="clearSelection" class="close-preview">✕</button>
       </div>
 
-      <!-- File Details -->
-      <div v-if="selectedFile" class="file-details">
-        <div class="file-details-grid">
-          <div class="detail-item">
-            <strong>Name:</strong> <span>{{ selectedFile.name }}</span>
+      <!-- Multi-select summary -->
+      <div v-if="isMultiSelectMode && selectedFileCount > 0" class="multi-select-summary">
+        <div class="summary-stats">
+          <div class="stat-item">
+            <strong>Files:</strong> {{ selectedFileCount }}
           </div>
-          <div class="detail-item">
-            <strong>Type:</strong> <span>{{ selectedFile.type }}</span>
-          </div>
-          <div class="detail-item">
-            <strong>Size:</strong> <span>{{ formatFileSize(selectedFile.size) }}</span>
-          </div>
-          <div class="detail-item">
-            <strong>Modified:</strong> <span>{{ selectedFile.modified }}</span>
+          <div class="stat-item">
+            <strong>Total Size:</strong> {{ getSelectedFilesInfo().totalSize }}
           </div>
         </div>
-      </div>
-
-      <!-- Preview Content -->
-      <div class="preview-content">
-        <!-- No Selection State -->
-        <div v-if="!selectedFile" class="no-selection">
-          <div class="no-selection-icon">📂</div>
-          <p>Choose a file from the left panel to view its contents</p>
-        </div>
-
-        <!-- Loading State -->
-        <div v-else-if="isLoadingFileContent" class="loading">
-          <div class="loading-spinner">⏳</div>
-          <p>Loading file content...</p>
-        </div>
-
-        <!-- Error State -->
-        <div v-else-if="fileContentError" class="error">
-          <div class="error-icon">❌</div>
-          <p>{{ fileContentError }}</p>
-          <button @click="loadFileContent(selectedFile)" class="retry-btn">Retry</button>
-        </div>
-
-        <!-- File Content Display -->
-        <div v-else class="file-content">
-          <div class="content-header">
-            <span class="content-type">{{ selectedFile.type.toUpperCase() }}</span>
-          </div>
-
-          <!-- Image Content -->
-          <div v-if="selectedFile.contentType === 'image'" class="image-content">
-            <img
-              :src="selectedFile.content"
-              :alt="selectedFile.name"
-              class="preview-image"
-              @error="handleImageError"
-            />
-          </div>
-
-          <!-- Media Content -->
-          <div v-else-if="selectedFile.contentType === 'media'" class="media-content">
-            <video
-              controls
-              preload="metadata"
-              controlslist="nodownload"
-              class="video-player"
-              :style="videoPlayerStyle"
-              :poster="getVideoPoster(selectedFile)"
-              @loadedmetadata="handleVideoLoadedMetadata"
+        
+        <div class="selected-files-list">
+          <h4>Selected Files:</h4>
+          <div class="selected-files-grid">
+            <div 
+              v-for="file in selectedFilesArray.slice(0, 10)" 
+              :key="file.id"
+              class="selected-file-item"
             >
-              <source :src="selectedFile.content" :type="selectedFile.type">
-              <p>Your browser doesn't support HTML5 video. Here is a <a :href="selectedFile.content">link to the video</a> instead.</p>
-            </video>
-            <div class="video-info">
-              <span class="video-name">{{ selectedFile.name }}</span>
-              <span class="video-type">{{ selectedFile.type }}</span>
-              <span v-if="videoDimensions.width && videoDimensions.height" class="video-dimensions">
-                {{ videoDimensions.width }}×{{ videoDimensions.height }}
-              </span>
+              <span class="file-icon-small">{{ fileIcon(file.type) }}</span>
+              <span class="file-name-small">{{ file.name }}</span>
+              <span class="file-size-small">{{ formatFileSize(file.size) }}</span>
+            </div>
+            <div v-if="selectedFileCount > 10" class="more-files">
+              +{{ selectedFileCount - 10 }} more files...
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- PDF Content -->
-          <div v-else-if="selectedFile.contentType === 'pdf'" class="pdf-content">
-            <div class="pdf-controls">
-              <button @click="togglePdfFullscreen" class="pdf-fullscreen-btn">
-                {{ isFullscreenPdf ? '↙️' : '⤢' }} {{ isFullscreenPdf ? 'Exit Fullscreen' : 'Fullscreen' }}
-              </button>
+      <!-- Single file details and preview (existing code) -->
+      <div v-else>
+        <!-- File Details -->
+        <div v-if="selectedFile" class="file-details">
+          <div class="file-details-grid">
+            <div class="detail-item">
+              <strong>Name:</strong> <span>{{ selectedFile.name }}</span>
             </div>
-            
-            <iframe 
-              :src="selectedFile.content" 
-              class="pdf-viewer"
-              :style="pdfViewerStyle"
-              @load="handlePdfLoad"
-              title="PDF Viewer"
-            ></iframe>
-            
-            <div class="pdf-info">
-              <span class="pdf-name">{{ selectedFile.name }}</span>
-              <span class="pdf-type">{{ selectedFile.type }}</span>
+            <div class="detail-item">
+              <strong>Type:</strong> <span>{{ selectedFile.type }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Size:</strong> <span>{{ formatFileSize(selectedFile.size) }}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Modified:</strong> <span>{{ selectedFile.modified }}</span>
             </div>
           </div>
+        </div>
 
-          <!-- Text/JSON Content -->
-          <div v-else-if="selectedFile.contentType === 'text' || selectedFile.contentType === 'json'" class="text-content">
-            <pre class="content-display"><code>{{ selectedFile.content }}</code></pre>
+        <!-- Preview Content -->
+        <div class="preview-content">
+          <!-- No Selection State -->
+          <div v-if="!selectedFile" class="no-selection">
+            <div class="no-selection-icon">📂</div>
+            <p>Choose a file from the left panel to view its contents</p>
+            <p v-if="isMultiSelectMode" class="multi-select-hint">
+              💡 Multi-select is active. Toggle it off to preview individual files.
+            </p>
           </div>
 
-          <!-- Unknown Content Type -->
-          <div v-else class="unknown-content">
-            <div class="unknown-icon">❓</div>
-            <p>Cannot preview this file type</p>
-            <p class="file-info">{{ selectedFile.type }}</p>
+          <!-- Loading State -->
+          <div v-else-if="isLoadingFileContent" class="loading-container">
+            <div class="loading-spinner large"></div>
+            <p class="loading-text">Loading file content...</p>
+            <p class="loading-subtext">{{ selectedFile.name }}</p>
+          </div>
+
+          <!-- Error State -->
+          <div v-else-if="fileContentError" class="error">
+            <div class="error-icon">❌</div>
+            <p>{{ fileContentError }}</p>
+            <button @click="loadFileContent(selectedFile)" class="retry-btn" :disabled="isLoadingFileContent">
+              {{ isLoadingFileContent ? 'Loading...' : 'Retry' }}
+            </button>
+          </div>
+
+          <!-- File Content Display -->
+          <div v-else class="file-content">
+            <div class="content-header">
+              <span class="content-type">{{ selectedFile.type.toUpperCase() }}</span>
+            </div>
+
+            <!-- Image Content -->
+            <div v-if="selectedFile.contentType === 'image'" class="image-content">
+              <img
+                :src="selectedFile.content"
+                :alt="selectedFile.name"
+                class="preview-image"
+                @error="handleImageError"
+              />
+            </div>
+
+            <!-- Media Content -->
+            <div v-else-if="selectedFile.contentType === 'media'" class="media-content">
+              <video
+                controls
+                preload="metadata"
+                controlslist="nodownload"
+                class="video-player"
+                :style="videoPlayerStyle"
+                :poster="getVideoPoster(selectedFile)"
+                @loadedmetadata="handleVideoLoadedMetadata"
+              >
+                <source :src="selectedFile.content" :type="selectedFile.type">
+                <p>Your browser doesn't support HTML5 video. Here is a <a :href="selectedFile.content">link to the video</a> instead.</p>
+              </video>
+              <div class="video-info">
+                <span class="video-name">{{ selectedFile.name }}</span>
+                <span class="video-type">{{ selectedFile.type }}</span>
+                <span v-if="videoDimensions.width && videoDimensions.height" class="video-dimensions">
+                  {{ videoDimensions.width }}×{{ videoDimensions.height }}
+                </span>
+              </div>
+            </div>
+
+            <!-- PDF Content -->
+            <div v-else-if="selectedFile.contentType === 'pdf'" class="pdf-content">
+              <div class="pdf-controls">
+                <button @click="togglePdfFullscreen" class="pdf-fullscreen-btn">
+                  {{ isFullscreenPdf ? '↙️' : '⤢' }} {{ isFullscreenPdf ? 'Exit Fullscreen' : 'Fullscreen' }}
+                </button>
+              </div>
+              
+              <iframe 
+                :src="selectedFile.content" 
+                class="pdf-viewer"
+                :style="pdfViewerStyle"
+                @load="handlePdfLoad"
+                title="PDF Viewer"
+              ></iframe>
+              
+              <div class="pdf-info">
+                <span class="pdf-name">{{ selectedFile.name }}</span>
+                <span class="pdf-type">{{ selectedFile.type }}</span>
+              </div>
+            </div>
+
+            <!-- Text/JSON Content -->
+            <div v-else-if="selectedFile.contentType === 'text' || selectedFile.contentType === 'json'" class="text-content">
+              <pre class="content-display"><code>{{ selectedFile.content }}</code></pre>
+            </div>
+
+            <!-- Unknown Content Type -->
+            <div v-else class="unknown-content">
+              <div class="unknown-icon">❓</div>
+              <p>Cannot preview this file type</p>
+              <p class="file-info">{{ selectedFile.type }}</p>
+            </div>
           </div>
         </div>
       </div>
