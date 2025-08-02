@@ -3,26 +3,21 @@ import { ref } from 'vue'
 import './MyInfo.css'
 
 var user = {
-  "name": "Prateek",
+  "name": "Prateek Tiwari",
   "email": "prateek@example.com",
   "phone": "+1 (555) 123-4567",
   "location": "San Francisco, CA",
   "role": "Software Engineer",
   "department": "Engineering",
   "joinDate": "January 15, 2023",
-  "employeeId": "EMP-2023-001",
-  "manager": "Sarah Johnson",
   "status": "Active",
-  "avatar": "https://ui-avatars.com/api/?name=Prateek&background=667eea&color=fff&size=120"
+  "avatar": "https://ui-avatars.com/api/?name=Prateek%20Tiwari&background=667eea&color=fff&size=120"
 }
 </script>
 
 <template>
   <div class="dashboard">
     <div class="user-details-pane">
-      <div class="user-details-header">
-        <h2>User Profile</h2>
-      </div>
       <div class="user-profile-card">
         <div class="avatar-section">
           <img :src="user.avatar" :alt="user.name" class="user-avatar" />
@@ -33,14 +28,6 @@ var user = {
           </div>
         </div>
         <div class="quick-stats">
-          <div class="stat-item">
-            <span class="stat-label">Employee ID</span>
-            <span class="stat-value">{{ user.employeeId }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Department</span>
-            <span class="stat-value">{{ user.department }}</span>
-          </div>
           <div class="stat-item">
             <span class="stat-label">Join Date</span>
             <span class="stat-value">{{ user.joinDate }}</span>
@@ -88,19 +75,6 @@ var user = {
           <div class="info-content">
             <span class="info-label">Location</span>
             <span class="info-value">{{ user.location }}</span>
-          </div>
-        </div>
-
-        <div class="info-card">
-          <div class="info-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <div class="info-content">
-            <span class="info-label">Manager</span>
-            <span class="info-value">{{ user.manager }}</span>
           </div>
         </div>
       </div>

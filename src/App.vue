@@ -50,7 +50,7 @@ const isComponentActive = (componentId) => {
 
 <template>
   <div id="app">
-    <h1>Home Management</h1>
+    <h1>My Hub</h1>
     
     <!-- Navigation Buttons -->
     <nav class="component-nav">
@@ -77,7 +77,7 @@ const isComponentActive = (componentId) => {
         />
         <div v-else class="welcome-screen">
           <div class="welcome-icon">🏠</div>
-          <h2>Welcome to Home Management</h2>
+          <h2>Welcome to My Hub</h2>
           <p>Hope you are doing Well !!</p>
         </div>
       </Transition>
