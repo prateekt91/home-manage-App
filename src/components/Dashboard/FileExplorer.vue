@@ -27,6 +27,12 @@ const loadingFileId = ref(null)
 const filesError = ref(null)
 const fileContentError = ref(null)
 
+// Upload state
+const isUploading = ref(false)
+const uploadProgress = ref(0)
+const uploadError = ref(null)
+const selectedFilesForUpload = ref([])
+
 // Media-specific state
 const videoDimensions = ref({ width: 0, height: 0 })
 const pdfDimensions = ref({ width: 0, height: 0 })
@@ -205,9 +211,59 @@ const clearAllSelections = () => {
 const downloadSelectedFiles = async () => {
   if (selectedFiles.value.size === 0) return
   
-  // Here you would implement bulk download logic
+  //TODO  Here you would implement bulk download logic
   console.log('Downloading selected files:', selectedFilesArray.value.map(f => f.name))
   alert(`Would download ${selectedFiles.value.size} files`)
+}
+
+const uploadFiles = async () => {
+  if (selectedFilesForUpload.value.length === 0) {
+    alert('Please select files to upload')
+    return
+  }
+
+  isUploading.value = true
+  uploadProgress.value = 0
+  uploadError.value = null
+
+  try {
+    const result = await apiService.uploadFiles(selectedFilesForUpload.value)
+
+    // Show success message
+    alert(`Successfully uploaded ${selectedFilesForUpload.value.length} files`)
+
+    // Clear selected files for upload
+    selectedFilesForUpload.value = []
+
+    // Refresh the file list to show new files
+    await refreshFiles()
+
+  } catch (error) {
+    uploadError.value = error.message || 'Failed to upload files'
+    console.error('Error uploading files:', error)
+    alert('Failed to upload files. Please try again.')
+  } finally {
+    isUploading.value = false
+    uploadProgress.value = 0
+  }
+}
+
+const handleFileSelection = (event) => {
+  const files = Array.from(event.target.files)
+  selectedFilesForUpload.value = files
+}
+
+const removeFileFromUpload = (index) => {
+  selectedFilesForUpload.value.splice(index, 1)
+}
+
+const clearUploadSelection = () => {
+  selectedFilesForUpload.value = []
+}
+
+const triggerFileInput = () => {
+  const fileInput = document.getElementById('file-upload-input')
+  fileInput?.click()
 }
 
 const deleteSelectedFiles = async () => {
@@ -360,6 +416,37 @@ const apiService = {
 
     }catch (error) {
       console.error('Error deleting files:', error)
+      throw error
+    }
+  },
+
+  async uploadFiles(files) {
+    const url = `${API_BASE_URL}/files/upload`
+    try {
+      const formData = new FormData()
+      files.forEach(file => {
+        formData.append('files', file)
+      })
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json()
+      } else {
+        // If no JSON content, return a success indicator
+        return { success: true, message: 'Files uploaded successfully' }
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error)
       throw error
     }
   }
@@ -517,6 +604,73 @@ onBeforeUnmount(() => {
         >
           {{ isMultiSelectMode ? '✓' : '☐' }}
         </button>
+        <button 
+          @click="triggerFileInput" 
+          class="upload-btn"
+          :disabled="isLoadingFiles || isUploading"
+        >
+          📤 Upload
+        </button>
+      </div>
+
+      <!-- Hidden file input -->
+      <input
+        id="file-upload-input"
+        type="file"
+        multiple
+        @change="handleFileSelection"
+        style="display: none"
+      >
+
+      <!-- Upload section -->
+      <div v-if="selectedFilesForUpload.length > 0" class="upload-section">
+        <div class="upload-header">
+          <h4>📤 Files to Upload ({{ selectedFilesForUpload.length }})</h4>
+          <button @click="clearUploadSelection" class="clear-upload-btn">✕ Clear</button>
+        </div>
+
+        <div class="upload-file-list">
+          <div 
+            v-for="(file, index) in selectedFilesForUpload" 
+            :key="index"
+            class="upload-file-item"
+          >
+            <span class="upload-file-icon">{{ fileIcon(file.type) }}</span>
+            <span class="upload-file-name">{{ file.name }}</span>
+            <span class="upload-file-size">{{ formatFileSize(file.size) }}</span>
+            <button 
+              @click="removeFileFromUpload(index)" 
+              class="remove-file-btn"
+              :disabled="isUploading"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div class="upload-controls">
+          <button 
+            @click="uploadFiles" 
+            class="upload-action-btn"
+            :disabled="isUploading || selectedFilesForUpload.length === 0"
+          >
+            {{ isUploading ? 'Uploading...' : `Upload ${selectedFilesForUpload.length} files` }}
+          </button>
+        </div>
+
+        <!-- Upload progress -->
+        <div v-if="isUploading" class="upload-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
+          </div>
+          <span class="progress-text">{{ uploadProgress }}% uploaded</span>
+        </div>
+
+        <!-- Upload error -->
+        <div v-if="uploadError" class="upload-error">
+          <span class="error-icon">❌</span>
+          <span>{{ uploadError }}</span>
+        </div>
       </div>
 
       <!-- Multi-select controls -->
