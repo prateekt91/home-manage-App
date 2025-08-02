@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import './App.css'
 import FileExplorer from './components/Dashboard/FileExplorer.vue'
-import UserManager from './components/User/UserManager.vue'
+import MyInfo from './components/User/MyInfo.vue'
 // Import other components as needed
 
 // Component registry - add new components here
@@ -15,11 +15,11 @@ const components = ref([
     description: 'Browse and manage files'
   },
   {
-    id: 'user-manager',
-    name: 'User Manager',
-    component: UserManager,
+    id: 'my-info',
+    name: 'My Information',
+    component: MyInfo,
     icon: '✅',
-    description: 'Manage your User profile'
+    description: 'Manage your profile'
   }
 ])
 
