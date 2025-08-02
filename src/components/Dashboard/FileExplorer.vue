@@ -216,9 +216,23 @@ const deleteSelectedFiles = async () => {
   const confirmed = confirm(`Are you sure you want to delete ${selectedFiles.value.size} selected files?`)
   if (!confirmed) return
   
-  // Here you would implement bulk delete logic
-  console.log('Deleting selected files:', selectedFilesArray.value.map(f => f.name))
-  alert(`Would delete ${selectedFiles.value.size} files`)
+  try {
+    // Call the API to delete files
+    await apiService.deleteMultipleFiles(selectedFilesArray)
+
+    // Show a success message
+    alert(`Successfully deleted ${selectedFilesArray.value.length} files`)
+
+    // Clear selections after successful deletion
+    selectedFiles.value.clear()
+    
+    // Refresh the file list to reflect changes
+    await refreshFiles()
+    
+  } catch (error) {
+    console.error('Error deleting files:', error)
+    alert('Failed to delete files. Please try again.')
+  }
 }
 
 const getSelectedFilesInfo = () => {
@@ -318,6 +332,35 @@ const apiService = {
           content: text
         }
       }
+    }
+  },
+
+  async deleteMultipleFiles(files) {
+    let url = `${API_BASE_URL}/files/delete`
+    try {
+      const formData = new FormData()
+      files.value.forEach(file => {
+        formData.append('fileNames', file.name)
+      })
+      const response = await fetch(url, {
+        method: 'DELETE',
+        body: formData
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get('content-type')
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json()
+      } else {
+        // If no JSON content, return a success indicator
+        return { success: true, message: 'Files deleted successfully' }
+      }
+
+    }catch (error) {
+      console.error('Error deleting files:', error)
+      throw error
     }
   }
 }
