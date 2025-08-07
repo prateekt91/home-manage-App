@@ -1,0 +1,146 @@
+#app {
+    text-align: center;
+    padding: 2rem;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+h1 {
+    margin-bottom: 2rem;
+    color: #2c3e50;
+    font-size: 2.5rem;
+}
+
+/* Navigation Styles */
+.component-nav {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.component-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2c3e50;
+    text-decoration: none;
+    min-width: 140px;
+}
+
+.component-button:hover {
+    border-color: #3498db;
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+}
+
+.component-button.active {
+    border-color: #3498db;
+    background-color: #3498db;
+    color: white;
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.component-button.active:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+
+.component-icon {
+    font-size: 1.2em;
+}
+
+.component-name {
+    white-space: nowrap;
+}
+
+/* Component Container */
+.component-container {
+    min-height: 600px;
+    width: 100%;
+}
+
+/* Welcome Screen */
+.welcome-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: #7f8c8d;
+}
+
+.welcome-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.welcome-screen h2 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+
+.welcome-screen p {
+    font-size: 1.1rem;
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+/* Transition Effects */
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    #app {
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .component-nav {
+        gap: 0.5rem;
+    }
+
+    .component-button {
+        min-width: 120px;
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .component-container {
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 480px) {
+    .component-nav {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .component-button {
+        width: 100%;
+        max-width: 280px;
+    }
+}
