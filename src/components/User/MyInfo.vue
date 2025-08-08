@@ -1,18 +1,61 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import './MyInfo.css'
 
-var user = {
-  "name": "Prateek Tiwari",
-  "email": "prateek@example.com",
-  "phone": "+1 (555) 123-4567",
-  "location": "San Francisco, CA",
-  "role": "Software Engineer",
-  "department": "Engineering",
-  "joinDate": "January 15, 2023",
-  "status": "Active",
-  "avatar": "https://ui-avatars.com/api/?name=Prateek%20Tiwari&background=667eea&color=fff&size=120"
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+const username = "prateek91"
+
+const user = ref({
+  fname: "",
+  lname: "",
+  name: "",
+  email: "",
+  userName: "",
+  phone: "",
+  location: "",
+  role: "",
+  department: "",
+  joindate: "",
+  joinDate: "",
+  status: false,
+  statusText: "",
+  avatar: ""
+})
+
+const apiService = {
+  async getUser () {
+    try{
+      const response = await fetch(`${API_BASE_URL}/users/getUser?userName=${username}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data')
+      }
+     return await response.json()
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  }
 }
+
+const fetchUserData = async () => {
+  try {
+    const userData = await apiService.getUser()
+    // Map API response to user object
+    user.value = {
+      ...userData,
+      name: `${userData.fname} ${userData.lname}`,
+      joinDate: userData.joindate,
+      statusText: userData.status ? 'Active' : 'Inactive'
+    }
+  } catch (error) {
+    console.error('Failed to fetch user data:', error)
+    // You might want to show an error message to the user here
+  }
+}
+
+onMounted(() => {
+  fetchUserData()
+})
 </script>
 
 <template>
@@ -24,7 +67,7 @@ var user = {
           <div class="user-basic-info">
             <h3 class="user-name">{{ user.name }}</h3>
             <p class="user-role">{{ user.role }}</p>
-            <span class="status-badge" :class="user.status.toLowerCase()">{{ user.status }}</span>
+            <span class="status-badge" :class="user.statusText.toLowerCase()">{{ user.statusText }}</span>
           </div>
         </div>
         <div class="quick-stats">
@@ -79,13 +122,6 @@ var user = {
         </div>
       </div>
 
-      <div class="additional-info">
-        <h4>Hobbies</h4>
-        <div class="detail-row">
-<!--          <span class="detail-label">Position:</span>-->
-          <span class="detail-value">{{ user.hobbies }}</span>
-        </div>
-      </div>
     </div>
   </div>
 </template>
