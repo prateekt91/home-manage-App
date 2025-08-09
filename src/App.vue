@@ -60,6 +60,12 @@ const handleUserLogin = (userData) => {
   activeComponent.value = 'my-info'
 }
 
+// Handle user logout
+const handleLogout = () => {
+  userStore.logout()
+  activeComponent.value = null
+}
+
 // Watch for login status changes and update active component if necessary
 watch(() => userStore.isLoggedIn.value, (isLoggedIn) => {
   if (!isLoggedIn) {
@@ -95,8 +101,13 @@ const isComponentActive = (componentId) => {
   <div id="app">
     <div class="app-header">
       <h1>My Hub</h1>
-      <div v-if="userStore.isLoggedIn.value" class="user-status">
-        Welcome, {{ userStore.currentUser.value.fullName || userStore.currentUser.value.username }}!
+      <div v-if="userStore.isLoggedIn.value" class="user-section">
+        <div class="user-status">
+          Welcome, {{ userStore.currentUser.value.fullName || userStore.currentUser.value.username }}!
+        </div>
+        <button @click="handleLogout" class="logout-btn">
+          🚪 Logout
+        </button>
       </div>
     </div>
 

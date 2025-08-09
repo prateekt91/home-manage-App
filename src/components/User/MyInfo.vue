@@ -76,10 +76,6 @@ const fetchUserData = async () => {
   }
 }
 
-const handleLogout = () => {
-  userStore.logout()
-}
-
 onMounted(() => {
   if (isLoggedIn.value) {
     fetchUserData()
@@ -111,11 +107,6 @@ onMounted(() => {
               <span class="stat-label">Join Date</span>
               <span class="stat-value">{{ user.joinDate || currentUser.joinDate }}</span>
             </div>
-          </div>
-          <div class="user-actions">
-            <button @click="handleLogout" class="logout-button">
-              🚪 Logout
-            </button>
           </div>
         </div>
       </div>

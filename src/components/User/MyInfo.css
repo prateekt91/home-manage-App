@@ -271,38 +271,6 @@
     font-size: 1.1rem;
 }
 
-.user-actions {
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    text-align: center;
-}
-
-.logout-button {
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.logout-button:hover {
-    background: #c82333;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-}
-
-.logout-button:active {
-    transform: translateY(0);
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard {
@@ -330,10 +298,5 @@
     .not-logged-in {
         margin: 1rem;
         padding: 2rem 1rem;
-    }
-
-    .logout-button {
-        padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
     }
 }
