@@ -166,7 +166,7 @@ const toggleConfirmPasswordVisibility = () => {
         </div>
         <!-- Sign In Link -->
         <div class="signin-link">
-          <p>Already have an account? <a href="#" class="signin-link-text">Sign in</a></p>
+          <p>Already have an account? Click Login Above!!</p>
         </div>
       </div>
     </div>
@@ -191,7 +191,7 @@ const toggleConfirmPasswordVisibility = () => {
                 type="text"
                 class="form-input"
                 :class="{ 'error': errors.firstName }"
-                placeholder="John"
+                placeholder="First Name"
               />
               <span v-if="errors.firstName" class="error-message">{{ errors.firstName }}</span>
             </div>
@@ -205,7 +205,7 @@ const toggleConfirmPasswordVisibility = () => {
                 type="text"
                 class="form-input"
                 :class="{ 'error': errors.lastName }"
-                placeholder="Doe"
+                placeholder="Last Name"
               />
               <span v-if="errors.lastName" class="error-message">{{ errors.lastName }}</span>
             </div>
@@ -221,7 +221,7 @@ const toggleConfirmPasswordVisibility = () => {
               type="email"
               class="form-input"
               :class="{ 'error': errors.email }"
-              placeholder="john@example.com"
+              placeholder="name@example.com"
             />
             <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
           </div>

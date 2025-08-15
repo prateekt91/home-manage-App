@@ -895,7 +895,7 @@ onBeforeUnmount(() => {
             <div v-else-if="selectedFile.contentType === 'pdf'" class="pdf-content">
               <div class="pdf-controls">
                 <button @click="togglePdfFullscreen" class="pdf-fullscreen-btn">
-                  {{ isFullscreenPdf ? '↙️' : '⤢' }} {{ isFullscreenPdf ? 'Exit Fullscreen' : 'Fullscreen' }}
+                  {{ isFullscreenPdf ? '↙️' : '⤢' }} {{ isFullscreenPdf ? 'Exit Maximize' : 'Maximize' }}
                 </button>
               </div>
               

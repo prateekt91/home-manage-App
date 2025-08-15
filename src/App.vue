@@ -115,7 +115,7 @@ const isComponentActive = (componentId) => {
 
     <div class="app-header">
       <div class="header-left">
-        <h1>My Hub</h1>
+        <h1>Home Sphere</h1>
       </div>
 
       <div class="header-center">
@@ -159,7 +159,7 @@ const isComponentActive = (componentId) => {
         />
         <div v-else class="welcome-screen">
           <div class="welcome-icon">🏠</div>
-          <h2>Welcome to My Hub</h2>
+          <h2>Welcome to Home Sphere</h2>
           <p v-if="!userStore.isLoggedIn.value">Please login or sign up to get started!</p>
           <p v-else>Hope you are doing Well, {{ userStore.currentUser.value.fullName || userStore.currentUser.value.username }}!!</p>
         </div>
