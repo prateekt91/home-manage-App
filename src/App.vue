@@ -6,6 +6,7 @@ import MyInfo from './components/User/MyInfo.vue'
 import UserLogin from './components/Login/UserLogin.vue'
 import SignUp from './components/SignUp/SignUp.vue'
 import ChatbotAvatar from './components/Chatbot/ChatbotAvatar.vue'
+import ThreeBackground from './components/ThreeBackground/ThreeBackground.vue'
 import { userStore } from './stores/userStore.js'
 
 // Initialize user store
@@ -109,6 +110,9 @@ const isComponentActive = (componentId) => {
 
 <template>
   <div id="app">
+    <!-- 3D Animated Background -->
+    <ThreeBackground />
+
     <div class="app-header">
       <div class="header-left">
         <h1>My Hub</h1>
