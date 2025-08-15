@@ -1,0 +1,63 @@
+.three-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.three-background canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Ensure proper layering */
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+/* Add subtle backdrop filter for better content readability */
+.app-header,
+.component-container {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Enhance card backgrounds for better visibility */
+.login-card,
+.signup-container .form-container,
+.chatbox,
+.support-modal,
+.file-viewer-pane,
+.preview-pane {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Dark mode support for 3D background elements */
+@media (prefers-color-scheme: dark) {
+  .login-card,
+  .signup-container .form-container,
+  .chatbox,
+  .support-modal,
+  .file-viewer-pane,
+  .preview-pane {
+    background: rgba(31, 41, 55, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+}
+
+/* Performance optimizations */
+.three-background {
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
