@@ -4,6 +4,7 @@ import './App.css'
 import FileExplorer from './components/Dashboard/FileExplorer.vue'
 import MyInfo from './components/User/MyInfo.vue'
 import UserLogin from './components/Login/UserLogin.vue'
+import SignUp from './components/SignUp/SignUp.vue'
 import ChatbotAvatar from './components/Chatbot/ChatbotAvatar.vue'
 import { userStore } from './stores/userStore.js'
 
@@ -20,6 +21,14 @@ const components = ref([
     component: UserLogin,
     icon: '🔐',
     description: 'User login',
+    requiresAuth: false
+  },
+  {
+    id: 'signup',
+    name: 'Sign Up',
+    component: SignUp,
+    icon: '✨',
+    description: 'Create a new account',
     requiresAuth: false
   },
   {
@@ -49,7 +58,7 @@ const visibleComponents = computed(() => {
     // Show components that require auth (File Explorer and My Info)
     return components.value.filter(comp => comp.requiresAuth === true)
   } else {
-    // Show only components that don't require authentication (Login)
+    // Show only components that don't require authentication (Login and SignUp)
     return components.value.filter(comp => comp.requiresAuth === false)
   }
 })
@@ -101,31 +110,39 @@ const isComponentActive = (componentId) => {
 <template>
   <div id="app">
     <div class="app-header">
-      <h1>My Hub</h1>
-      <div v-if="userStore.isLoggedIn.value" class="user-section">
-        <div class="user-status">
-          Welcome, {{ userStore.currentUser.value.fullName || userStore.currentUser.value.username }}!
+      <div class="header-left">
+        <h1>My Hub</h1>
+      </div>
+
+      <div class="header-center">
+        <!-- Navigation Buttons in the center -->
+        <nav class="component-nav">
+          <button
+            v-for="component in visibleComponents"
+            :key="component.id"
+            @click="toggleComponent(component.id)"
+            class="component-button"
+            :class="{ 'active': isComponentActive(component.id) }"
+            :title="component.description"
+          >
+            <span class="component-icon">{{ component.icon }}</span>
+            <span class="component-name">{{ component.name }}</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <!-- User Section -->
+        <div v-if="userStore.isLoggedIn.value" class="user-section">
+          <div class="user-status">
+            Welcome, {{ userStore.currentUser.value.fullName || userStore.currentUser.value.username }}!
+          </div>
+          <button @click="handleLogout" class="logout-btn">
+            🚪 Logout
+          </button>
         </div>
-        <button @click="handleLogout" class="logout-btn">
-          🚪 Logout
-        </button>
       </div>
     </div>
-
-    <!-- Navigation Buttons -->
-    <nav class="component-nav">
-      <button
-        v-for="component in visibleComponents"
-        :key="component.id"
-        @click="toggleComponent(component.id)"
-        class="component-button"
-        :class="{ 'active': isComponentActive(component.id) }"
-        :title="component.description"
-      >
-        <span class="component-icon">{{ component.icon }}</span>
-        <span class="component-name">{{ component.name }}</span>
-      </button>
-    </nav>
 
     <!-- Component Display Area -->
     <div class="component-container">
@@ -139,7 +156,7 @@ const isComponentActive = (componentId) => {
         <div v-else class="welcome-screen">
           <div class="welcome-icon">🏠</div>
           <h2>Welcome to My Hub</h2>
-          <p v-if="!userStore.isLoggedIn.value">Please login to access your dashboard!</p>
+          <p v-if="!userStore.isLoggedIn.value">Please login or sign up to get started!</p>
           <p v-else>Hope you are doing Well, {{ userStore.currentUser.value.fullName || userStore.currentUser.value.username }}!!</p>
         </div>
       </Transition>
