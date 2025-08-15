@@ -40,8 +40,7 @@ const handleClick = () => {
 // Sample chat options
 const chatOptions = [
   { id: 1, text: '💬 Start Chat', icon: '💬' },
-  { id: 2, text: '❓ Get Help', icon: '❓' },
-  { id: 3, text: '📧 Contact Support', icon: '📧' }
+  { id: 2, text: '📧 Contact Support', icon: '📧' }
 ]
 
 const handleOptionClick = (option) => {
@@ -52,9 +51,6 @@ const handleOptionClick = (option) => {
     // Start Chat - Open the chatbox
     isChatOpen.value = true
   } else if (option.id === 2) {
-    // Get Help logic
-
-  } else if (option.id === 3) {
     // Contact Support logic
     isContactSupportOpen.value = true
   }
