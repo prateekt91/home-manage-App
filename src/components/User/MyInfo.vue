@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import './MyInfo.css'
-import { userStore } from '../../stores/userStore.js'
+import { userStore } from '@/stores/userStore.js'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 

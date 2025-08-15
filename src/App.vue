@@ -4,6 +4,7 @@ import './App.css'
 import FileExplorer from './components/Dashboard/FileExplorer.vue'
 import MyInfo from './components/User/MyInfo.vue'
 import UserLogin from './components/Login/UserLogin.vue'
+import ChatbotAvatar from './components/Chatbot/ChatbotAvatar.vue'
 import { userStore } from './stores/userStore.js'
 
 // Initialize user store
@@ -143,5 +144,8 @@ const isComponentActive = (componentId) => {
         </div>
       </Transition>
     </div>
+
+    <!-- Chatbot Avatar -->
+    <ChatbotAvatar />
   </div>
 </template>
